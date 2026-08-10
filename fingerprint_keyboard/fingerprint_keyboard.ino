@@ -8,6 +8,7 @@
 #define SFM_IRQ 0
 #define SFM_RX 20
 #define SFM_TX 21
+#define LED_PIN 8
 
 #define WIFI_SSID    "WIFI_SSID"
 #define WIFI_PASS    "WIFI_PASS"
@@ -26,6 +27,16 @@ bool lastTouchState = false;
 
 void sfmPinInt1() {
   SFM.pinInterrupt();
+}
+
+void blinkLed(int times) {
+  pinMode(LED_PIN, OUTPUT);
+  for (int i = 0; i < times; i++) {
+    digitalWrite(LED_PIN, LOW);
+    delay(200);
+    digitalWrite(LED_PIN, HIGH);
+    delay(200);
+  }
 }
 
 uint8_t regStep1(uint16_t &uid) {
@@ -157,6 +168,9 @@ void loop() {
           Serial.print(" - sending password");
           Serial.println(sendPassword(pwd) ? " ... done" : " ... failed");
         }
+        blinkLed(1);
+      } else {
+        blinkLed(2);
       }
     }
   }
