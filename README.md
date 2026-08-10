@@ -41,7 +41,7 @@ the real values (`WIFI_SSID`, `WIFI_PASS`, `SERVER_HOST` = your PC's IP,
 
 #define WIFI_SSID    "your-wifi-ssid"
 #define WIFI_PASS    "your-wifi-password"
-#define SERVER_HOST  "192.168.0.154"
+#define SERVER_HOST  "SERVER_HOST"
 #define AUTH_TOKEN   "your-token"
 #define XOR_KEY      "your-key"
 
@@ -51,14 +51,17 @@ const char PASSWORD_2[] = "password-for-finger-2";
 #endif
 ```
 
-This file is gitignored, so your credentials stay out of the repository.
-
-Build and flash with `make` (requires `arduino-cli` and the esp32 core):
+This file is gitignored, so your credentials stay out of the repository. For extra
+security, `secrets.h` is owned by `root:root` with mode `600` (root-only), so
+building and flashing **require sudo**:
 
 ```bash
-make flash
-make monitor   # optional, serial output
+make flash    # prompts for your sudo password
+make monitor  # optional, serial output
 ```
+
+The Makefile wraps `arduino-cli` with `sudo` (keeping `HOME` so your esp32 cores
+and libraries are still found). To edit the secrets: `sudo nano fingerprint_keyboard/secrets.h`.
 
 Serial commands: `e` = enroll a finger (3 presses), `d` = delete all users.
 
@@ -72,11 +75,15 @@ nano .env                   # set AUTH_TOKEN and XOR_KEY (must match the ESP32)
 python3 typer.py            # run it and keep it open
 ```
 
-To auto-start the daemon on login (Hyprland), add to `~/.config/hypr/autostart.conf`:
+To auto-start the daemon on login, add to `~/.config/hypr/autostart.conf` (Hyprland):
 
 ```
 exec-once = bash -c 'while true; do python3 /path/to/typer/typer.py >> /tmp/typer.log 2>&1; sleep 2; done'
 ```
+
+This is written for a Hyprland setup, but the daemon is just a Python script — it
+works equally well under systemd (e.g. a `systemd --user` service). The Hyprland
+`exec-once` wrapper was simply more convenient here.
 
 ## Security notes
 
