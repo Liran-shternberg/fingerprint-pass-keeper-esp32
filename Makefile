@@ -8,15 +8,15 @@ BAUD ?= 115200
 all: build
 
 build:
-	arduino-cli compile -b $(FQBN) $(SKETCH)
+	sudo env HOME=$(HOME) arduino-cli compile -b $(FQBN) $(SKETCH)
 
 flash: build upload
 
 upload:
-	arduino-cli upload -b $(FQBN) -p $(PORT) $(SKETCH)
+	sudo env HOME=$(HOME) arduino-cli upload -b $(FQBN) -p $(PORT) $(SKETCH)
 
 monitor:
 	arduino-cli monitor -p $(PORT) -c baudrate=$(BAUD)
 
 clean:
-	rm -rf ~/.cache/arduino/sketches
+	sudo rm -rf ~/.cache/arduino/sketches

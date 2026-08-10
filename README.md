@@ -31,9 +31,27 @@ class `SFM_Module`).
 
 ## ESP32 Setup
 
-Edit the `#define`s at the top of `fingerprint_keyboard/fingerprint_keyboard.ino`:
-`WIFI_SSID`, `WIFI_PASS`, `SERVER_HOST` (your PC's IP), `AUTH_TOKEN`, `XOR_KEY`,
-and `PASSWORD_1`/`PASSWORD_2` (one per enrolled finger).
+Create the file `fingerprint_keyboard/secrets.h` with this template and fill in
+the real values (`WIFI_SSID`, `WIFI_PASS`, `SERVER_HOST` = your PC's IP,
+`AUTH_TOKEN`, `XOR_KEY`, and `PASSWORD_1`/`PASSWORD_2`, one per enrolled finger):
+
+```cpp
+#ifndef SECRETS_H
+#define SECRETS_H
+
+#define WIFI_SSID    "your-wifi-ssid"
+#define WIFI_PASS    "your-wifi-password"
+#define SERVER_HOST  "192.168.0.154"
+#define AUTH_TOKEN   "your-token"
+#define XOR_KEY      "your-key"
+
+const char PASSWORD_1[] = "password-for-finger-1";
+const char PASSWORD_2[] = "password-for-finger-2";
+
+#endif
+```
+
+This file is gitignored, so your credentials stay out of the repository.
 
 Build and flash with `make` (requires `arduino-cli` and the esp32 core):
 

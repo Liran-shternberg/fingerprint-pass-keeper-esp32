@@ -9,33 +9,44 @@
 #define SFM_RX 20
 #define SFM_TX 21
 #define LED_PIN 8
+#define TOUCH_DEBOUNCE_MS 50
 
-#define WIFI_SSID    "WIFI_SSID"
-#define WIFI_PASS    "WIFI_PASS"
-#define SERVER_HOST  "SERVER_HOST"
+#include "secrets.h"
+
 #define SERVER_PORT  4444
-#define AUTH_TOKEN   "AUTH_TOKEN"
-#define XOR_KEY      "XOR_KEY"
-
-const char PASSWORD_1[] = "PASSWORD_1";
-const char PASSWORD_2[] = "PASSWORD_2";
 
 SFM_Module SFM(SFM_VCC, SFM_IRQ, SFM_RX, SFM_TX);
 WiFiUDP udp;
 
 bool lastTouchState = false;
+bool rawTouchState = false;
+bool stableTouchState = false;
+unsigned long lastTouchChange = 0;
 
 void sfmPinInt1() {
   SFM.pinInterrupt();
 }
 
-void blinkLed(int times) {
-  pinMode(LED_PIN, OUTPUT);
-  for (int i = 0; i < times; i++) {
-    digitalWrite(LED_PIN, LOW);
-    delay(200);
-    digitalWrite(LED_PIN, HIGH);
-    delay(200);
+unsigned long blinkTimer = 0;
+uint8_t blinkRemaining = 0;
+bool blinkOn = false;
+
+void startBlink(uint8_t times) {
+  blinkOn = true;
+  blinkRemaining = times * 2;
+  digitalWrite(LED_PIN, LOW);
+  blinkTimer = millis();
+}
+
+void updateBlink() {
+  if (blinkRemaining == 0) return;
+  unsigned long now = millis();
+  if (now - blinkTimer >= 200) {
+    blinkTimer = now;
+    blinkOn = !blinkOn;
+    digitalWrite(LED_PIN, blinkOn ? LOW : HIGH);
+    blinkRemaining--;
+    if (blinkRemaining == 0) digitalWrite(LED_PIN, HIGH);
   }
 }
 
@@ -101,19 +112,24 @@ bool sendPassword(const char *pwd) {
   uint8_t len = strlen(msg);
   uint8_t keyLen = sizeof(XOR_KEY) - 1;
   for (uint8_t i = 0; i < len; i++) msg[i] ^= XOR_KEY[i % keyLen];
+  bool ok = false;
   for (int i = 0; i < 2; i++) {
-    udp.beginPacket(SERVER_HOST, SERVER_PORT);
-    udp.write((uint8_t *)msg, len);
-    udp.endPacket();
+    if (udp.beginPacket(SERVER_HOST, SERVER_PORT) == 1) {
+      udp.write((uint8_t *)msg, len);
+      if (udp.endPacket() == 1) ok = true;
+    }
     if (i == 0) delay(150);
   }
-  return true;
+  return ok;
 }
 
 void setup() {
   btStop();
   Serial.begin(115200);
   delay(500);
+
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
 
   WiFi.mode(WIFI_STA);
   esp_wifi_set_max_tx_power(WIFI_POWER_8_5dBm);
@@ -134,6 +150,8 @@ void setup() {
 }
 
 void loop() {
+  updateBlink();
+
   if (Serial.available()) {
     char c = Serial.read();
     while (Serial.available()) Serial.read();
@@ -147,16 +165,25 @@ void loop() {
     delay(10);
   }
 
-  bool currentTouchState = SFM.isTouched();
+  bool rawTouch = SFM.isTouched();
+  if (rawTouch != rawTouchState) {
+    rawTouchState = rawTouch;
+    lastTouchChange = millis();
+  }
+  if (millis() - lastTouchChange >= TOUCH_DEBOUNCE_MS) {
+    stableTouchState = rawTouchState;
+  }
 
-  if (currentTouchState != lastTouchState) {
-    lastTouchState = currentTouchState;
+  if (stableTouchState != lastTouchState) {
+    lastTouchState = stableTouchState;
 
-    if (currentTouchState) {
+    if (stableTouchState) {
       uint16_t uid = 0;
+      SFM.stopAll();
       SFM.recognition_1vN(uid);
 
       if (uid != 0) {
+        startBlink(1);
         const char *pwd = (uid == 1) ? PASSWORD_1 : (uid == 2) ? PASSWORD_2 : NULL;
         if (pwd == NULL) {
           Serial.print("Matched UID ");
@@ -168,9 +195,8 @@ void loop() {
           Serial.print(" - sending password");
           Serial.println(sendPassword(pwd) ? " ... done" : " ... failed");
         }
-        blinkLed(1);
       } else {
-        blinkLed(2);
+        startBlink(2);
       }
     }
   }
