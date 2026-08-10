@@ -14,7 +14,8 @@ using `wtype` — so it works anywhere (login screens, browsers, terminals).
 ## Hardware
 
 - ESP32-C3 SuperMini
-- SFM-V1.7 fingerprint sensor (UART, 115200 baud)
+- SFM-V1.7 Semiconductor Integrated Touch Capacitive Acquisition And
+  Identification Fingerprint Sensor Module (UART communication, 115200 baud)
 
 | Sensor | ESP32-C3 |
 |--------|----------|
@@ -22,6 +23,7 @@ using `wtype` — so it works anywhere (login screens, browsers, terminals).
 | Black (RXD)  | GPIO 21 (UART TX) |
 | Blue (touch) | GPIO 0 (IRQ) |
 | Green (3.3V) | 3.3V |
+| White (3.3V) | 3.3V |
 | Red (GND)    | GND |
 
 Requires the **SFM-V1.7** library by Matrixchung (`#include "sfm.hpp"`,
