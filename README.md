@@ -26,6 +26,8 @@ using `wtype` — so it works anywhere (login screens, browsers, terminals).
 | White (3.3V) | 3.3V |
 | Red (GND)    | GND |
 
+![ESP32-C3 SuperMini pinout](esp32-c3-super-mini-pinout.svg)
+
 Requires the **SFM-V1.7** library by Matrixchung (`#include "sfm.hpp"`,
 class `SFM_Module`).
 
