@@ -8,6 +8,7 @@ BAUD ?= 115200
 all: build
 
 build:
+	sudo env HOME=$(HOME) python3 typer/gen_cipher.py fingerprint_keyboard/secrets.h typer/public_key.pem fingerprint_keyboard/cipher.h
 	sudo env HOME=$(HOME) arduino-cli compile -b $(FQBN) $(SKETCH)
 
 flash: build upload

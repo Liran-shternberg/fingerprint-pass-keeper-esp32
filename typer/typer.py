@@ -4,6 +4,9 @@ import socket
 import subprocess
 import time
 
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -24,14 +27,23 @@ load_env(os.path.join(BASE, ".env"))
 
 HOST, PORT = "0.0.0.0", 4444
 TOKEN = os.environ.get("AUTH_TOKEN", "TOKEN")
-KEY = os.environ.get("XOR_KEY", "xor_decrypt").encode()
+
+PRIVATE_KEY = serialization.load_pem_private_key(
+    open(os.path.join(BASE, "private_key.pem"), "rb").read(), password=None)
 
 last_msg = ""
 last_time = 0.0
 
 
-def xor_decrypt(data):
-    return bytes(b ^ KEY[i % len(KEY)] for i, b in enumerate(data)).decode(errors="replace")
+def rsa_decrypt(data):
+    try:
+        return PRIVATE_KEY.decrypt(
+            data,
+            padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),
+                         algorithm=hashes.SHA256(), label=None),
+        ).decode(errors="replace")
+    except ValueError:
+        return ""
 
 
 def main():
@@ -46,7 +58,7 @@ def main():
         except Exception as e:
             print(f"[typer] recv error: {e}", flush=True)
             continue
-        msg = xor_decrypt(data).strip()
+        msg = rsa_decrypt(data).strip()
         now = time.time()
         if msg == last_msg and now - last_time < 1.0:
             continue

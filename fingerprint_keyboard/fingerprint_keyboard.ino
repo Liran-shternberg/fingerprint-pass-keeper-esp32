@@ -12,6 +12,7 @@
 #define TOUCH_DEBOUNCE_MS 50
 
 #include "secrets.h"
+#include "cipher.h"
 
 #define SERVER_PORT  4444
 
@@ -102,20 +103,18 @@ void enrollFinger() {
   Serial.println("=== Done ===");
 }
 
-bool sendPassword(const char *pwd) {
+// ponytail: sends a fixed pre-encrypted blob (cipher.h), so the same bytes go
+// over the wire every time - replayable by someone already on the LAN.
+// Upgrade path: encrypt on the fly with the public key if replay matters.
+bool sendCipher(const uint8_t *cipher) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi down");
     return false;
   }
-  char msg[128];
-  snprintf(msg, sizeof(msg), "%s %s\n", AUTH_TOKEN, pwd);
-  uint8_t len = strlen(msg);
-  uint8_t keyLen = sizeof(XOR_KEY) - 1;
-  for (uint8_t i = 0; i < len; i++) msg[i] ^= XOR_KEY[i % keyLen];
   bool ok = false;
   for (int i = 0; i < 2; i++) {
     if (udp.beginPacket(SERVER_HOST, SERVER_PORT) == 1) {
-      udp.write((uint8_t *)msg, len);
+      udp.write(cipher, CIPHER_LEN);
       if (udp.endPacket() == 1) ok = true;
     }
     if (i == 0) delay(150);
@@ -184,8 +183,10 @@ void loop() {
 
       if (uid != 0) {
         startBlink(1);
-        const char *pwd = (uid == 1) ? PASSWORD_1 : (uid == 2) ? PASSWORD_2 : NULL;
-        if (pwd == NULL) {
+        const uint8_t *cipher = NULL;
+        if (uid == 1) cipher = CIPHER_1;
+        else if (uid == 2) cipher = CIPHER_2;
+        if (cipher == NULL) {
           Serial.print("Matched UID ");
           Serial.print(uid);
           Serial.println(" - no password assigned");
@@ -193,7 +194,7 @@ void loop() {
           Serial.print("Matched UID ");
           Serial.print(uid);
           Serial.print(" - sending password");
-          Serial.println(sendPassword(pwd) ? " ... done" : " ... failed");
+          Serial.println(sendCipher(cipher) ? " ... done" : " ... failed");
         }
       } else {
         startBlink(2);
