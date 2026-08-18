@@ -4,3 +4,4 @@ __pycache__/
 secrets.h
 cipher.h
 private_key.pem
+public_key.pem
